@@ -1,5 +1,5 @@
 <?php 
-class Fox_Cache_Module_Amp {
+class Fox_Cache_Module {
 	
 public $prefix="";
 private $system_control=false;
