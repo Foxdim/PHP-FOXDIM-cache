@@ -9,7 +9,7 @@ function __construct() {
     $this->getset_txt_cache_clear(); //call class and clear cache
 }
 
-function Page_Cache($type="start",$name="",$seconds=30,$crypto="false",$block_type="none")//none - get - post - getpost
+function Page_Cache($type="start",$name="",$seconds=30,$crypto=false,$block_type="none",$contentType="text/html; charset=UTF-8")//none - get - post - getpost
 {
 	$return_array=[
 	"status"=>"fail",
@@ -26,6 +26,7 @@ function Page_Cache($type="start",$name="",$seconds=30,$crypto="false",$block_ty
 	$return_array=[
 	"status"=>"fail",
 	"info"=>"Blocked Type Cache [".$block_type."]",
+	"Content-type"=>"",
 	"value"=>""
 	
 	];
@@ -38,12 +39,13 @@ function Page_Cache($type="start",$name="",$seconds=30,$crypto="false",$block_ty
 		
 	if($type=="start"&&$this->page_caching==false)
 	{
-	$control_data=$this->getset_txt("get",$name,"",$seconds,$crypto);
+	$control_data=$this->getset_txt("get",$name,"",$seconds,$crypto,$contentType);
 	$this->prefix=$cache_prefix;
 	if($control_data["status"]=="success"){$this->page_caching=false;
 	$return_array=[
 	"status"=>"success",
 	"info"=>"Date Return Cache File",
+	"Content-type"=>$control_data["Content-type"],
 	"value"=>$control_data["value"]
 	];
 	return $return_array;
@@ -55,6 +57,7 @@ function Page_Cache($type="start",$name="",$seconds=30,$crypto="false",$block_ty
 	$return_array=[
 	"status"=>"waiting",
 	"info"=>"Caching Started",
+	"Content-type"=>$contentType,
 	"value"=>"Call again function on type=fin"
 	];
 	return $return_array;
@@ -65,10 +68,9 @@ function Page_Cache($type="start",$name="",$seconds=30,$crypto="false",$block_ty
 	{
 		if($this->page_caching==true)
 		{
-		$ob_data = ob_get_contents();ob_end_clean();
-		$this->getset_txt("set",$name,$ob_data,$seconds,$crypto);$this->prefix=$cache_prefix;
+		$ob_data = ob_get_contents();
+		$this->getset_txt("set",$name,$ob_data,$seconds,$crypto,$contentType);$this->prefix=$cache_prefix;
 		$this->page_caching=false;
-		echo $ob_data;
 		$return_array=[
 	"status"=>"success",
 	"info"=>"Caching Finished",
@@ -84,7 +86,7 @@ function Page_Cache($type="start",$name="",$seconds=30,$crypto="false",$block_ty
 }
 
 
-function delegate($delegate_func,$name="delegatefunc",$seconds=30,$crypto="false")
+function delegate($delegate_func,$name="delegatefunc",$seconds=30,$crypto=false)
 {
 	$control_data=$this->getset_txt("get",$name,"",$seconds,$crypto);
 	if($control_data["status"]=="success"){echo $control_data["value"]["ob"]; return $control_data["value"]["return"];}
@@ -154,7 +156,7 @@ function getset_txt_cache_clear()
 		}
 	}
 }
-function getset_txt($type="getset",$name,$value="",$seconds=60,$cyrpto="false")
+function getset_txt($type="getset",$name,$value="",$seconds=60,$cyrpto=false,$contentType="text/html; charset=UTF-8")
 {
 $cache_folder = $_SERVER["DOCUMENT_ROOT"];
 $return_data= ["status"=>"fail","value"=>"","info"=>"not have"];
@@ -175,26 +177,26 @@ if($type=="get"||$type=="getset"){
 if($file_value!==false){
 	
 	$file_data=json_decode($file_value,true);
-	$new_value=$file_data["value"];
+	$new_value=base64_decode($file_data["value"]);
 	if($file_data["status"]!="success"){unlink($cache_file_path);$file_value==false;}
 	else if($file_data["delete_time"]<=time()){unlink($cache_file_path);}
-	else if($file_data["cyrpto"]=="true"){
-			$new_value=json_decode($this->decode($file_data["value"]),true);
+	else if($file_data["cyrpto"]==true){
+			$new_value=json_decode($this->decode($new_value),true);
 	}
-	$return_data= ["status"=>"success","value"=>$new_value,"info"=>"old cache"];
+	$return_data= ["status"=>"success","Content-type"=>$file_data["Content-type"],"value"=>$new_value,"info"=>"old cache"];
 }
-else {$return_data= ["status"=>"fail","value"=>"","info"=>"not have"];}
+else {$return_data= ["status"=>"fail","Content-type"=>"","value"=>"","info"=>"not have"];}
 }
 
 if($type=="set"||$type=="getset"){
 if($file_value===false||$type=="set")
 {
 	$new_value=$value;
-	if($cyrpto=="true"){
+	if($cyrpto==true){
 		$new_value=$this->encode(json_encode($value));
 	}
-	file_put_contents($cache_file_path,json_encode(["status"=>"success","value"=>$new_value,"delete_time"=>time()+($seconds),"cyrpto"=>$cyrpto]));
-	$return_data= ["status"=>"success","value"=>$value,"info"=>"create cache"];
+	file_put_contents($cache_file_path,json_encode(["status"=>"success","Content-type"=>$contentType,"value"=>base64_encode($new_value),"delete_time"=>time()+($seconds),"cyrpto"=>$cyrpto]));
+	$return_data= ["status"=>"success","Content-type"=>$contentType,"value"=>$value,"info"=>"create cache"];
 	
 }
 }
